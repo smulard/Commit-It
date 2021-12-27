@@ -1,4 +1,4 @@
-
+import argparse
 import csv
 import requests
 import json
@@ -11,8 +11,16 @@ from scipy.stats import skewnorm
 import zmanim
 from zmanim.hebrew_calendar.jewish_calendar import JewishCalendar
 from zmanim.hebrew_calendar.jewish_date import JewishDate 
+from zmanim.util.geo_location import GeoLocation
 
-
+def is_shabbat_or_yt():
+    # calculate whether the day is current shabbat or a yom tov with work forbidden
+    # returns true bool is shabbat or yt
+    # assumption: this will only be run in the morning as to avoid issues with calculating hebrew date based on location/time of day
+    d = JewishDate() # gets current date for hebrew and gregorian calendars, respectively
+    today = JewishCalendar(d.jewish_year, d.jewish_month, d.jewish_day)
+    assur = today.is_assur_bemelacha() # finds out if today is yom tov with assur bemelacha or shabbat
+    return assur
 
 def get_skew_int(numValues, maxValue, skewness):
     # number of commits per day is determined on a skewed positive distribution between 0-12
@@ -41,35 +49,39 @@ def commit():
     return repo
 
 def push(repo):
-    # assumption is remote repo and credentials already set up in git config
+    # assumption is remote repo and credentials already set up in localgit config
     origin = repo.remote(name='origin')
     origin.push()
 
 def main():
-    '''
-    commit_num = get_skew_int(100, 12, 10)
-    print ("Number of commits: " + str(commit_num))
-    for i in range(commit_num):
-        create_changes()
-        repo = commit()
-    push(repo)
-    '''
-    # if the day is a current date, then do not run
-    # find jewish year, jewish month, and jewish day
-    d = JewishDate() # gets current date for hebrew and gregorian calendars, respectively
-    jdate = d.jewish_date
-    print (jdate)
+    # flag for hebrew cal
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-s", "--shomer", dest="shomer", action="store_true", help="If True, then program will not run on Shabbat or Yomim Tovim")
+    flag_vals= parser.parse_args()
+    shomer = flag_vals.shomer
+    print("Shomer is " + str(shomer))
 
-    today = JewishCalendar(d.jewish_year, d.jewish_month, d.jewish_day)
-    print (today)
-    yom_tov_type = today.significant_day() # if None, then it's not yomtov
-    yom_tov_today = today.is_yom_tov_assur_bemelacha() # if work forbidden, then True
+    if shomer: 
+        no_work = is_shabbat_or_yt()
+        if no_work is False:
+            print ("Committing work today")
+            commit_num = get_skew_int(100, 12, 10)
+            print ("Number of commits: " + str(commit_num))
+            for i in range(commit_num):
+                create_changes()
+                repo = commit()
+            push(repo)
+        else:
+            print("I don't roll on Shabbos (or Yom Tov)")
+    else: # run on all days regardless of Jewish calendar
+        commit_num = get_skew_int(100, 12, 10)
+        print ("Number of commits: " + str(commit_num))
+        for i in range(commit_num):
+            create_changes()
+            repo = commit()
+            push(repo)
 
-    chan = JewishCalendar(d.jewish_year, 7, 17)
-    chanb = chan.significant_day()
-    print (chanb)
-    print (chan.is_yom_tov_assur_bemelacha())
-    print (chan.is_chol_hamoed())
+    
 if __name__ == "__main__":
     main()
 
