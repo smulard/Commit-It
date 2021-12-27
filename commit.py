@@ -1,17 +1,11 @@
 import argparse
 import csv
-import requests
-import json
-from github import Github
 import uuid
 from git import Repo
-import subprocess
 from datetime import datetime
 from scipy.stats import skewnorm
-import zmanim
 from zmanim.hebrew_calendar.jewish_calendar import JewishCalendar
 from zmanim.hebrew_calendar.jewish_date import JewishDate 
-from zmanim.util.geo_location import GeoLocation
 
 def is_shabbat_or_yt():
     # calculate whether the day is current shabbat or a yom tov with work forbidden
@@ -49,7 +43,7 @@ def commit():
     return repo
 
 def push(repo):
-    # assumption is remote repo and credentials already set up in localgit config
+    # assumption is remote repo and credentials already set up in local git config
     origin = repo.remote(name='origin')
     origin.push()
 
