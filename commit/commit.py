@@ -1,3 +1,4 @@
+import subprocess
 import argparse
 import csv
 import uuid
@@ -6,6 +7,10 @@ from datetime import datetime
 from scipy.stats import skewnorm
 from zmanim.hebrew_calendar.jewish_calendar import JewishCalendar
 from zmanim.hebrew_calendar.jewish_date import JewishDate 
+
+# check for repo
+def check_for_repo():
+    print ("TODO")
 
 def is_shabbat_or_yt():
     # calculate whether the day is current shabbat or a yom tov with work forbidden
@@ -33,9 +38,39 @@ def create_changes():
         f.write(delta + "\n")
     print ("Added line to file with uuid: " + delta) # log for container
 
+def setup_repo():
+    # repo is cloned by container or by user (if run locally)
+    # using specific branch for commits
+    with open("creds.csv", "r") as f:
+        reader = csv.reader(f, delimiter=",")
+        for i, line in enumerate(reader):
+            username = line[0]
+            print (username)
+            token = line[1]
+            remote_repo = line[2]
+
+    repo = Repo(search_parent_directories=True) # current repo
+    branch = "feature/p-vs-np"
+    branch_exists = False
+    try:
+        for ref in repo.references:
+            if branch == ref.name:
+                branch_exists = True
+                print ("Branch " + branch + " already exists.")
+        if branch_exists is False:
+            repo.git.checkout("-b", branch)
+        create_changes() # commit to setup inital local push
+        repo.index.add("changes.txt")
+        repo.index.commit("Setup")
+        repo.remote().name = remote_repo
+        push_output = repo.git.push('--set-upstream', repo.remote().name, branch)
+        print (push_output)
+    except:
+        print ("Branch and remote already setup")
+
 def commit():
     # add untracked hash file
-    repo = Repo(search_parent_directories=True)
+    repo = Repo(search_parent_directories=True) # TODO: DELETE
     repo.index.add("changes.txt") # adds file to be staged for commit
     now = datetime.now() # get current day and time
     dt_str = now.strftime("%m/%d/%Y %H:%M:%S") # formatting datetime for commit message
@@ -48,6 +83,7 @@ def push(repo):
     origin.push()
 
 def main():
+    '''
     # flag for hebrew cal
     parser = argparse.ArgumentParser()
     parser.add_argument("-s", "--shomer", dest="shomer", action="store_true", help="If True, then program will not run on Shabbat or Yomim Tovim")
@@ -74,6 +110,8 @@ def main():
             create_changes()
             repo = commit()
             push(repo)
+    '''
+    setup_repo()
 
     
 if __name__ == "__main__":
